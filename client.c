@@ -10,10 +10,11 @@
 
 #define PORT 3490
 #define BACKLOG 10
+#define MAXBUFLEN 1000
 
 int main(int argc, char *argv[]) {
 	if (argc != 4) {
-		fprintf(stderr, "usage: talk [HOSTNAME] [PORT] message\n");
+		fprintf(stderr, "usage: get [HOSTNAME] [PORT] [filename]\n");
 		return 1;
 	}
 	
@@ -57,5 +58,23 @@ int main(int argc, char *argv[]) {
 		perror("send()");
 	}
 
+	int bytes;
+	char buf[MAXBUFLEN];
+	while (1) {
+		bytes = recv(sockfd, buf, MAXBUFLEN - 1, 0);
+		if (bytes < 0) {
+			perror("recv()");
+			break;
+		} else if (bytes == 0) {
+			printf("The server has closed the connection.\n");
+			break;
+		} else {
+			buf[bytes] = '\0';
+			printf("%s", buf);
+			memset(buf, 0, MAXBUFLEN);
+		}
+	}	
+
+	close(sockfd);
 	return 0;
 }

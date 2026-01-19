@@ -7,6 +7,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <fcntl.h>
 
 #define PORT 3490
 #define BACKLOG 10
@@ -54,6 +55,8 @@ int main(int argc, char *argv[]) {
 	}
 	
 	char buf[MAXBUFLEN];
+	char err[] = "File does not exist\n";
+	char quit[] = "*quit";
 	while (1) {
 		int other = accept(sockfd, NULL, NULL);
 		if (other == -1) {
@@ -69,6 +72,27 @@ int main(int argc, char *argv[]) {
 		} else {
 			buf[bytes] = '\0';
 			printf("I got: %s\n", buf);
+			if (strcmp(buf, quit) == 0) break;
+			int fd = open(buf, O_RDONLY);
+			memset(buf, 0, sizeof buf);
+			if (fd == -1) {
+				int snd;
+				snd = send(other, err, strlen(err), 0);
+				if (snd == -1) {
+					perror("send()");
+					break;
+				}
+			} else {
+				int rd = read(fd, buf, MAXBUFLEN - 1);
+				if (rd == -1) {
+					perror("read()");
+				} else {
+					buf[rd] = '\0';
+					int snd = send(other, buf, strlen(buf), 0);
+					if (snd != rd) fprintf(stderr, "Couldn't send the whole file");
+					else printf("Sent the whole file!\n");
+				}
+			}
 		}
 		close(other);
 	}
